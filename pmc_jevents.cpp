@@ -32,12 +32,14 @@ const char *e[CNT_PAPI_EVENTS] = {"cpu/instructions/",  // Fixed
                    "uops_retired.retire_slots",
                    "uops_issued.any",
                    "int_misc.recovery_cycles",
-                   "cpu_clk_unhalted.thread",           // Fixed 
-                   "cpu_clk_unhalted.ref_tsc",           // Fixed, For core utilization 
-                   // Memory_Bound L3
-                   "cycle_activity.stalls_ldm_pending",
-                   "cycle_activity.stalls_l1d_pending",
-                   "cycle_activity.stalls_l2_pending"
+                   "cpu_clk_unhalted.thread",          // Fixed
+                   "cpu_clk_unhalted.ref_tsc"         // Fixed, For core utilization
+                   //// Memory_Bound L3A
+                   //// [WAVE HPC] commented out
+                   //"cycle_activity.stalls_l1d_miss",   //"cycle_activity.stalls_l1d_pending",
+                   //"cycle_activity.stalls_mem_any",    //"cycle_activity.stalls_ldm_pending",
+                   //"cycle_activity.stalls_l1d_miss",   //"cycle_activity.stalls_l1d_pending",
+                   //"cycle_activity.stalls_l2_miss"     //"cycle_activity.stalls_l2_pending"
                    };
 
 rdpmc_ctx ctx_rdpmc[CNT_PAPI_EVENTS];

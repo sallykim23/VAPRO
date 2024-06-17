@@ -11,7 +11,7 @@ SET(CMAKE_CXX_COMPILER mpicxx)
 
 
 SET(CMAKE_CXX_FLAGS "-Wall -g -O2 -Wno-deprecated-declarations -Wno-sign-compare")
-SET(CMAKE_SHARED_LINKER_FLAGS "-g")
+SET(CMAKE_SHARED_LINKER_FLAGS "-g -ldl")
 ADD_DEFINITIONS(-DDEBUG)
 set(CMAKE_CXX_STANDARD 11)
 

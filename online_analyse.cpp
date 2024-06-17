@@ -95,20 +95,23 @@ void online_anaylze_init()
 /* Setup description of the 4 MPI_FLOAT fields x, y, z, velocity */
     int blockcounts[2];
     MPI_Datatype oldtypes[2];
-    MPI_Aint offsets[2], extent;
+    //MPI_Aint offsets[2], extent;
+    MPI_Aint offsets[2], lb, extent;
     offsets[0] = 0;
     oldtypes[0] = MPI_UNSIGNED_LONG;
     blockcounts[0] = 2;
 
 /* Setup description of the 2 MPI_INT fields n, type */
 /* Need to first figure offset by getting size of MPI_FLOAT */
-    PMPI_Type_extent(oldtypes[0], &extent);
+    //PMPI_Type_extent(oldtypes[0], &extent);
+    MPI_Type_get_extent(oldtypes[0], &lb, &extent);
     offsets[1] = 2 * extent;
     oldtypes[1] = MPI_DOUBLE;
     blockcounts[1] = 2;
 
 /* Now define structured type and commit it */
-    PMPI_Type_struct(2, blockcounts, offsets, oldtypes, &mpi_online_type);
+    //PMPI_Type_struct(2, blockcounts, offsets, oldtypes, &mpi_online_type);
+    MPI_Type_create_struct(2, blockcounts, offsets, oldtypes, &mpi_online_type);
     PMPI_Type_commit(&mpi_online_type);
 
     online_inited = true;

@@ -18,7 +18,8 @@ const double eps = 1e-10;
 
 // PAPI constants
 //constexpr int CNT_PAPI_EVENTS = 1;
-constexpr int CNT_PAPI_EVENTS = 7; // [WAVE HPC] use 7 events for now. //10;
+//constexpr int CNT_PAPI_EVENTS = 7;
+constexpr int CNT_PAPI_EVENTS = 10; // [WAVE HPC]
 constexpr int CNT_RUSAGE_EVENTS = 4;
 constexpr int CNT_TOTAL_EVENTS = CNT_PAPI_EVENTS + CNT_RUSAGE_EVENTS;
 const int I_PAPI_TOT_INS=0; // Index of TOT_INS for workload analysis 

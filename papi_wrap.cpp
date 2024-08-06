@@ -38,6 +38,8 @@
 #include "pmu.h"
 #include "pmc_wrapper.h"
 
+#include <sys/time.h>
+
 #define likely(x) __builtin_expect(!!(x), 1)
 #define unlikely(x) __builtin_expect(!!(x), 0)
 
@@ -173,9 +175,12 @@ void pmc_enable()
 inline DataType pmc_get_data(ULL cur_time)
 {
     auto new_pmcs = pmc_read_real();
+    //printf("pmc_get_data\n");
     ULL diff_pmcs[CNT_PAPI_EVENTS];
-    for (int i = 0; i < CNT_PAPI_EVENTS; ++i)
+    for (int i = 0; i < CNT_PAPI_EVENTS; ++i) {
         diff_pmcs[i] = new_pmcs[i] - last_pmcs[i];
+        //printf("diff_pmcs[%d]: %lu\n", i, diff_pmcs[i]);
+    }
     DataType retv;
     retv.set_papi_data(diff_pmcs);
     retv.elapsed = cur_time - last_time; // append wall time to locate this record
@@ -327,8 +332,10 @@ __attribute_noinline__ void *get_invoke_point()
  */
 __attribute_noinline__ void papi_update(int suffix, int mpi_func, int count, int target, void *mpi_comm)
 {
+    printf("papi_update %d %d %d %d\n", suffix, mpi_func, count, target);
     if (!init_flag)
     {
+        printf("initialize papi\n");
         // #ifdef USE_PAPI
         //         papi_init();
         // #else
@@ -360,6 +367,25 @@ __attribute_noinline__ void papi_update(int suffix, int mpi_func, int count, int
     papi_data.mpi_count = count;
     papi_data.target = target;
     papi_data.mpi_comm = mpi_comm;
+
+    int finalize = 0;
+    if (suffix == 0 && mpi_func == 1 && count == 0 && target == 0) {
+        printf("finalize handler\n");
+
+        finalize = 1;
+
+        // stop timer
+        struct itimerval tv;
+        tv.it_value.tv_sec = 0; //0;
+        tv.it_value.tv_usec = 0;
+        tv.it_interval.tv_sec = 0;
+        tv.it_interval.tv_usec = 0;
+
+        if (setitimer(ITIMER_REAL, &tv, NULL) == -1) {
+            assert("Failed to set timer.\n");
+            //exit(0);
+        }
+    }
 
     // skip in recursive mpi invocations
     // There might be recursive in MPI libraries.
@@ -431,6 +457,7 @@ __attribute_noinline__ void papi_update(int suffix, int mpi_func, int count, int
             real_addr = (vertex_type == VertexType::Function) ? mpi_func : (long long)get_invoke_point();
     }
     void *current_call_addr = (void *)(real_addr);
+
 #ifdef ENABLE_SAMPLING
     if (sampling_flag && (double(rand_longlong()) > sampling_rate * ULLONG_MAX))
 #endif
@@ -472,7 +499,16 @@ __attribute_noinline__ void papi_update(int suffix, int mpi_func, int count, int
     //     pmc_reset();
     // #endif
     // #endif
-    last_pmcs = pmc_read_real();
+    if (!finalize) {
+        last_pmcs = pmc_read_real();
+    } else {
+        printf("PAPI_WRAP finalize!\n");
+        vector<ULL> ret;
+        for (int i = 0; i < CNT_PAPI_EVENTS; ++i) {
+            ret.emplace_back(0);
+        }
+        last_pmcs = ret;
+    }
     last_time = rdtsc();
 }
 
@@ -596,6 +632,7 @@ PathPerformance online_calc_path(bool is_calc, GraphValue &path_data,
     //        }
     //    }
 
+    printf("onlien_calc_path\n");
     for (const auto &record : interprocess_min_time)
     {
         if ((is_calc &&

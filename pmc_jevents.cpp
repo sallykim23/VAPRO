@@ -64,6 +64,8 @@ const char *e_toggle_4[CNT_PAPI_EVENTS_TOGGLE_4] = {
                    "cycle_activity.stalls_l2_miss"
                    };
 
+int num_toggling_iterations = 0;
+
 void handler(int sig) {
     static int action = 0;
 
@@ -95,7 +97,7 @@ void handler(int sig) {
                     fprintf(stderr, "Event %d %s\n", i, e_toggle_2[i]);
                     assert(!"No event");
                 }
-                if (rdpmc_open_attr(&attr, ctx_rdpmc + CNT_PAPI_EVENTS_ALWAYS + i, (i == 0) ? nullptr : ctx_rdpmc + 0) < 0) {
+                if (rdpmc_open_attr(&attr, ctx_rdpmc + CNT_PAPI_EVENTS_ALWAYS + i, ctx_rdpmc + 0) < 0) {
                     throw 400;
                     assert(!"Cannot open rdpmc");
                 }
@@ -123,7 +125,7 @@ void handler(int sig) {
                     fprintf(stderr, "Event %d %s\n", i, e_toggle_3[i]);
                     assert(!"No event");
                 }
-                if (rdpmc_open_attr(&attr, ctx_rdpmc + CNT_PAPI_EVENTS_ALWAYS + i, (i == 0) ? nullptr : ctx_rdpmc + 0) < 0) {
+                if (rdpmc_open_attr(&attr, ctx_rdpmc + CNT_PAPI_EVENTS_ALWAYS + i, ctx_rdpmc + 0) < 0) {
                     throw 400;
                     assert(!"Cannot open rdpmc");
                 }
@@ -151,7 +153,7 @@ void handler(int sig) {
                     fprintf(stderr, "Event %d %s\n", i, e_toggle_4[i]);
                     assert(!"No event");
                 }
-                if (rdpmc_open_attr(&attr, ctx_rdpmc + CNT_PAPI_EVENTS_ALWAYS + i, (i == 0) ? nullptr : ctx_rdpmc + 0) < 0) {
+                if (rdpmc_open_attr(&attr, ctx_rdpmc + CNT_PAPI_EVENTS_ALWAYS + i, ctx_rdpmc + 0) < 0) {
                     throw 400;
                     assert(!"Cannot open rdpmc");
                 }
@@ -177,7 +179,7 @@ void handler(int sig) {
                     fprintf(stderr, "Event %d %s\n", i, e_toggle_1[i]);
                     assert(!"No event");
                 }
-                if (rdpmc_open_attr(&attr, ctx_rdpmc + CNT_PAPI_EVENTS_ALWAYS + i, (i == 0) ? nullptr : ctx_rdpmc + 0) < 0) {
+                if (rdpmc_open_attr(&attr, ctx_rdpmc + CNT_PAPI_EVENTS_ALWAYS + i, ctx_rdpmc + 0) < 0) {
                     throw 400;
                     assert(!"Cannot open rdpmc");
                 }
@@ -189,8 +191,10 @@ void handler(int sig) {
     }
 
     action += 1;
-    if (action == 4)
+    if (action == 4) {
+        num_toggling_iterations += 1;
         action = 0;
+    }
 }
 
 void pmc_enable_real()
@@ -215,6 +219,8 @@ void pmc_enable_real()
         init = 1;
     }
 
+    num_toggling_iterations = 0;
+
     assert(sizeof(e_always) / sizeof(*e_always) == CNT_PAPI_EVENTS_ALWAYS);
     perf_event_attr attr;
     for (int i = 0; i < CNT_PAPI_EVENTS_ALWAYS; ++i)
@@ -233,7 +239,7 @@ void pmc_enable_real()
             fprintf(stderr, "Event %d %s\n", i, e_toggle_1[i]);
             assert(!"No event");
         }
-        if (rdpmc_open_attr(&attr, ctx_rdpmc + CNT_PAPI_EVENTS_ALWAYS + i, (i == 0) ? nullptr : ctx_rdpmc + 0) < 0)
+        if (rdpmc_open_attr(&attr, ctx_rdpmc + CNT_PAPI_EVENTS_ALWAYS + i, ctx_rdpmc + 0) < 0)
             assert(!"Cannot open rdpmc");
     }
     printf("pmc_enable_real\n");
@@ -241,6 +247,10 @@ void pmc_enable_real()
 
 vector<ULL> pmc_read_real()
 {
+    for (int i = 0; i < CNT_PAPI_EVENTS; ++i)
+        if (i != 0 && i != 5 && i != 6)
+            global_ret[i] *= num_toggling_iterations;
+
     for (int i = 0; i < CNT_PAPI_EVENTS_ALWAYS; ++i) {
         int idx = 0;
         if (i  == 0)
@@ -249,7 +259,7 @@ vector<ULL> pmc_read_real()
             idx = 5;
         else if (i == 2)
             idx = 6;
-        global_ret[idx] += rdpmc_read(ctx_rdpmc+i);
+        global_ret[idx] = rdpmc_read(ctx_rdpmc+i);
     }
 
     printf("pmc_read_real pid %d\n", getpid());
@@ -262,6 +272,11 @@ vector<ULL> pmc_read_real()
     for (int i = 0; i < CNT_PAPI_EVENTS; ++i) {
         ret.emplace_back(global_ret[i]);
     }
+
+    for (int i = 0; i < CNT_PAPI_EVENTS; ++i) {
+        global_ret[i] = 0;
+    }
+    num_toggling_iterations = 0;
 
     return ret;
 }

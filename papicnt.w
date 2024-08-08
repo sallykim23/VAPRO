@@ -109,6 +109,21 @@ int consumeTime(int k)
         fprintf(stderr,"Vapro library loaded\n");
     }
 }{{endfn}}
+
+// MPI_Init_thread
+//
+{{fn func MPI_Init_thread}}{
+    get_backtrace();
+    //papi_init();
+    {{callfn}}
+    PMPI_Comm_rank(MPI_COMM_WORLD, &rank);
+    papi_update(1, {{fn_id}}, 0, 0, nullptr);
+    if (rank==0)
+    {
+        fprintf(stderr,"Vapro library loaded\n");
+    }
+}{{endfn}}
+
 // __attribute_noinline__ void papi_update
 //(int suffix, int mpi_func, int count, int target, void *mpi_comm)
 

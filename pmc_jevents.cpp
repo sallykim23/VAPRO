@@ -201,8 +201,8 @@ void pmc_enable_real()
 {
     printf("PMC_ENABLE_REAL (%d)\n", getpid());
 
-    static int init = 0;
-    if (!init) {
+    static int handler_init = 0;
+    if (PMC_TOGGLING && !handler_init) {
         signal (SIGALRM, handler);
 
         struct itimerval tv;
@@ -216,7 +216,7 @@ void pmc_enable_real()
             //exit(0);
         }
 
-        init = 1;
+        handler_init = 1;
     }
 
     num_toggling_iterations = 0;
@@ -247,9 +247,10 @@ void pmc_enable_real()
 
 vector<ULL> pmc_read_real()
 {
-    for (int i = 0; i < CNT_PAPI_EVENTS; ++i)
-        if (i != 0 && i != 5 && i != 6)
-            global_ret[i] *= num_toggling_iterations;
+    if (PMC_TOGGLING)
+        for (int i = 0; i < CNT_PAPI_EVENTS; ++i)
+            if (i != 0 && i != 5 && i != 6)
+                global_ret[i] *= num_toggling_iterations;
 
     for (int i = 0; i < CNT_PAPI_EVENTS_ALWAYS; ++i) {
         int idx = 0;

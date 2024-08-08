@@ -16,6 +16,9 @@
 #endif
 const double eps = 1e-10;
 
+
+const bool PMC_TOGGLING = false;
+
 // PAPI constants
 //constexpr int CNT_PAPI_EVENTS = 1;
 //constexpr int CNT_PAPI_EVENTS = 7;

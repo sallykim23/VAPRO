@@ -369,7 +369,7 @@ __attribute_noinline__ void papi_update(int suffix, int mpi_func, int count, int
     papi_data.mpi_comm = mpi_comm;
 
     int finalize = 0;
-    if (suffix == 0 && mpi_func == 1 && count == 0 && target == 0) {
+    if (PMC_TOGGLING && suffix == 0 && mpi_func == 1 && count == 0 && target == 0) {
         printf("finalize handler\n");
 
         finalize = 1;

@@ -37,7 +37,6 @@
 // PMU, rdtsc
 #include "pmu.h"
 #include "pmc_wrapper.h"
-
 #include <sys/time.h>
 
 #define likely(x) __builtin_expect(!!(x), 1)
@@ -50,7 +49,7 @@ const long long Cpu_freq = CPU_FREQ;
 // using GraphKey=std::pair<void*,void*>;
 // using GraphValue=std::vector<DataType >;
 
-int events[6] = {PAPI_TOT_INS, PAPI_L1_TCM, PAPI_L2_TCM, PAPI_BR_MSP, PAPI_VEC_DP}; //, PAPI_SR_INS}; //, PAPI_LD_INS, PAPI_L3_TCA};
+int events[1] = {PAPI_TOT_INS}; //, PAPI_SR_INS}; //, PAPI_LD_INS, PAPI_L3_TCA};
 const int J_MPI_INIT = 0;
 const int J_MPI_BARRIER = 23;
 const int J_MPI_WAIT = 317;
@@ -151,7 +150,7 @@ void pmc_enable()
     init_time = rdtsc();
 
     // wrapper for pmc API
-    pmc_enable_real();
+    //pmc_enable_real();
 
     // get VERTEX_GRAIN
     char *vertex_path_str = getenv("VERTEX_GRAIN");
@@ -171,10 +170,10 @@ void pmc_enable()
  * This function has side effect. It changes last_time and last_totcycle.
  * @param cur_time
  * @return
- */
+/
 inline DataType pmc_get_data(ULL cur_time)
 {
-    auto new_pmcs = pmc_read_real();
+    //auto new_pmcs = pmc_read_real();
     //printf("pmc_get_data\n");
     ULL diff_pmcs[CNT_PAPI_EVENTS];
     for (int i = 0; i < CNT_PAPI_EVENTS; ++i) {
@@ -188,15 +187,15 @@ inline DataType pmc_get_data(ULL cur_time)
     last_time = cur_time;
     last_pmcs = std::move(new_pmcs);
     return retv;
-}
+}*/
 
 void vapro_init()
 {
-    PMPI_Comm_rank(MPI_COMM_WORLD, &mpi_rank);
-    PMPI_Comm_size(MPI_COMM_WORLD, &mpi_size);
+    //PMPI_Comm_rank(MPI_COMM_WORLD, &mpi_rank);
+    //PMPI_Comm_size(MPI_COMM_WORLD, &mpi_size);
     // DEBUG
     //    char *env_vapro_online_period = getenv("VAPRO_ONLINE_PERIOD");
-
+    int mpi_rank =0;
     if (mpi_rank == 0)
     {
         fprintf(stderr, "Shared library loaded..\n");
@@ -332,34 +331,36 @@ __attribute_noinline__ void *get_invoke_point()
  */
 __attribute_noinline__ void papi_update(int suffix, int mpi_func, int count, int target, void *mpi_comm)
 {
+    int mpi_rank =0;
     printf("papi_update %d %d %d %d\n", suffix, mpi_func, count, target);
     if (!init_flag)
     {
         printf("initialize papi\n");
-        // #ifdef USE_PAPI
-        //         papi_init();
-        // #else
-        pmc_enable();
-        // #endif
-        // fprintf(stderr, "INFO: start online init, rank=%d\n", mpi_rank);
-        int inited = 0;
-        MPI_Initialized(&inited);
+        #ifdef USE_PAPI
+                papi_init();
+        #else
+        	pmc_enable();
+        #endif
+        	fprintf(stderr, "INFO: start online init, rank=%d\n", mpi_rank);
+        //int inited = 1;
+        //iMPI_Initialized(&inited);
         //        if (inited && suffix==0)
         // The wrapper of MPI_Init has only suffix 1
-        if (inited)
-            vapro_init();
-        else
-            return;
-        if (mpi_rank == 0)
-            fprintf(stderr, "INFO: Vapro init, rank=%d\n", mpi_rank);
+        //if (inited)
+          //  vapro_init();
+        //else
+          //  return;
+        //if (mpi_rank == 0)
+        //	fprintf(stderr, "INFO: Vapro init, rank=%d\n", mpi_rank);
     }
     // if finished
-    if (finish_flag)
-        return;
+    //if (finish_flag)
+    //	papi_finalize();
+//	return;
 
     // Get PMU data ASAP to exclude Vapro noise
     unsigned long long current_tsc = rdtsc();
-    auto papi_data = pmc_get_data(current_tsc);
+    auto papi_data = papi_get_data(current_tsc);
 #ifdef USE_RUSAGE
     papi_data.set_rusage_data(get_rusage_data().data());
 #endif
@@ -369,11 +370,10 @@ __attribute_noinline__ void papi_update(int suffix, int mpi_func, int count, int
     papi_data.mpi_comm = mpi_comm;
 
     int finalize = 0;
-    if (PMC_TOGGLING && suffix == 0 && mpi_func == 1 && count == 0 && target == 0) {
+    if (suffix == 0 && mpi_func == 1 && count == 0 && target == 0) {
         printf("finalize handler\n");
 
         finalize = 1;
-
         // stop timer
         struct itimerval tv;
         tv.it_value.tv_sec = 0; //0;
@@ -491,24 +491,25 @@ __attribute_noinline__ void papi_update(int suffix, int mpi_func, int count, int
 
     // reset base counter
     last_time = rdtsc();
-    // #ifdef USE_PAPI
-    //     papi_get_data(last_time); // reset PAPI counter
-    // #else
-    //     last_totcycle = rdpmc_instructions();
+    #ifdef USE_PAPI
+    	papi_get_data(last_time); // reset PAPI counter
+        fprintf(stderr,"papi_get_Data");
+    #else
+        last_totcycle = rdpmc_instructions();
     // #ifndef USE_ASSEMBLY_RDPMC
     //     pmc_reset();
+    #endif
     // #endif
-    // #endif
-    if (!finalize) {
-        last_pmcs = pmc_read_real();
-    } else {
-        printf("PAPI_WRAP finalize!\n");
-        vector<ULL> ret;
-        for (int i = 0; i < CNT_PAPI_EVENTS; ++i) {
-            ret.emplace_back(0);
-        }
-        last_pmcs = ret;
-    }
+    //if (!finalize) {
+      //  last_pmcs = pmc_read_real();
+    //} else {
+      //  printf("PAPI_WRAP finalize!\n");
+        //vector<ULL> ret;
+        //for (int i = 0; i < CNT_PAPI_EVENTS; ++i) {
+          //  ret.emplace_back(0);
+        //}
+        //last_pmcs = ret;
+    //}
     last_time = rdtsc();
 }
 
@@ -969,7 +970,7 @@ vector<double> comm_performance_process(Graph &graph, int time_l, int time_r,
     return ret;
 }
 
-void print_graph_json(const Graph &graph, int rank, const string &filename_prefix)
+void print_graph_json(const Graph &graph, int rank, int total, const string &filename_prefix)
 {
     // debug
     double sum_comm_time = 0;
@@ -997,23 +998,23 @@ void print_graph_json(const Graph &graph, int rank, const string &filename_prefi
             //     one_call.append((uint64_t)value);
             Json::Value one_call;
             // only place TOT_INST at the beginning
-            one_call.append((Json::UInt64)data.papi[0]);
+            one_call.append((Json::UInt64)data.papi[rank]);
             one_call.append(data.mpi_func);
-            one_call.append(data.mpi_count);
+            one_call.append(rank);// to implement muiltithreaded rank
             one_call.append(data.target);
             // debug
             one_call.append("T");
 
-            one_call.append(double(data.timestamp - init_time) / CPU_FREQ);
+            one_call.append(data.papi[total+rank]/1000000000.0);//need to change for the total # of threads
             if (data.mpi_func == J_MPI_INIT)
                 one_call.append(-0.00001);
             else
             {
-                one_call.append(double(data.elapsed) / CPU_FREQ);
+                one_call.append(data.papi[total+rank]/1000000000.0);
                 sum_comm_time += double(data.elapsed) / CPU_FREQ;
             }
             // append other PMU data to the end
-            for (int i = 1; i < CNT_TOTAL_EVENTS; ++i)
+           for (int i = 0; i < 12; ++i)
                 one_call.append((Json::UInt64)data.papi[i]);
 
             list["value"].append(one_call);
@@ -1068,7 +1069,7 @@ void print_process_memory_layout(int rank, const string &prefix)
  * Output graph and original data to file
  * @param rank
  */
-void generate_performance_graph(int rank)
+void generate_performance_graph(int rank, int total)
 {
     summary.total_run_time = (rdtsc() - init_time) / CPU_FREQ;
     int l = 0, r = int(summary.total_run_time);
@@ -1109,13 +1110,13 @@ void generate_performance_graph(int rank)
     //       if (mpi_rank % 512 == 0)
     {
         //        print_process_memory_layout(rank, "log6_");
-        print_graph_json(graph_calc, rank, "log0_");
-        print_graph_json(graph_comm, rank, "log1_");
+        print_graph_json(graph_calc, rank, total, "log0_");
+        print_graph_json(graph_comm, rank, total, "log1_");
         //        print_graph_json(graph_io, rank, "log5_");
     }
 }
 
-void print_graph(int rank)
+void print_graph(int rank, int total)
 {
     //    puts("Start print_graph\n");
     //    unsigned long long finalize_time = rdtsc();
@@ -1128,7 +1129,8 @@ void print_graph(int rank)
     //            fprintf(stderr, "Vapro: measured elapsed time: %.4f\n",
     //                    double(finalize_time - init_time) / CPU_FREQ);
     //        }
-    generate_performance_graph(rank);
+    generate_performance_graph(rank,total);
+    papi_destroy(rank);
     //    }
     //    puts("End print_graph\n");
 }

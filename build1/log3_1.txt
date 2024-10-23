@@ -1,0 +1,3 @@
+0 0 0.000000 0.000000
+{"calc_covered_ratio":0.0,"comm_covered_ratio":0.0,"covered_calc_time":0.0,"covered_comm_time":0.0,"edge_cnt":10,"total_covered_ratio":0.0,"total_run_time":0.49299973913043477,"vertex_cnt":0}
+null

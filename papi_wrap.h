@@ -9,7 +9,7 @@
 #include <utility>
 #include <vector>
 #include <map>
-
+#include <cstdlib>
 #ifndef CPU_FREQ
 #warning Use default TSC frequency
 #define CPU_FREQ 2.3e9 // todo: 2.3 or 2.4?
@@ -17,19 +17,18 @@
 const double eps = 1e-10;
 
 
-const bool PMC_TOGGLING = false;
+const bool PMC_TOGGLING = false; //false;
 
 // PAPI constants
 //constexpr int CNT_PAPI_EVENTS = 1;
 //constexpr int CNT_PAPI_EVENTS = 7;
-constexpr int CNT_PAPI_EVENTS = 10; // [WAVE HPC]
+constexpr int CNT_PAPI_EVENTS = 1; // only measuring tot_inst
 constexpr int CNT_RUSAGE_EVENTS = 4;
 constexpr int CNT_TOTAL_EVENTS = CNT_PAPI_EVENTS + CNT_RUSAGE_EVENTS;
 const int I_PAPI_TOT_INS=0; // Index of TOT_INS for workload analysis 
 
 
 extern int mpi_size, mpi_rank;
-
 struct Comm_key
 {
     int target, mpi_count;
@@ -45,17 +44,25 @@ struct Comm_key
 
 struct DataType
 {
-    long long papi[CNT_TOTAL_EVENTS];
+    long long *papi;
     unsigned long long elapsed; // elapsed time of this code snippet
     unsigned long long timestamp; // rdtsc timestamp
     // MPI function only
     int target, mpi_func, mpi_count;
     void* mpi_comm;
 
-    void set_papi_data(unsigned long long data[])
+//    void set_papi_data(unsigned long long data[])
+  //  {
+    //    memcpy(papi, data, sizeof(uint64_t) * CNT_PAPI_EVENTS);
+    //}
+
+    void set_papi_data(int num_threads, long long data[])
     {
-        memcpy(papi, data, sizeof(uint64_t) * CNT_PAPI_EVENTS);
+	papi= (long long*) malloc(num_threads *3 * sizeof(long long));
+	for(int i=0;i<num_threads*3;i++)
+    		papi[i] = data[i];
     }
+
 
     void set_rusage_data(long long data[])
     {
@@ -89,7 +96,7 @@ void papi_init();
 void papi_update(int suffix);
 //void papi_update(int suffix, int function_number, int count);
 void papi_update(int suffix, int mpi_func, int count, int target, void *mpi_comm);
-void print_graph(int rank);
+void print_graph(int rank, int total);
 bool path_data_adequate(const GraphValue &path_data);
 bool path_stable(const GraphValue &path_data);
 void online_generate_latest_period(ULL current_tsc, ULL last_online_tsc);

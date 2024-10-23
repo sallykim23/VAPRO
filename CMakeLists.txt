@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.5)
 project(Vapro)
 
-find_package(MPI REQUIRED)
+find_package(OpenMP REQUIRED)
 include_directories(${MPI_INCLUDE_PATH})
 
 # Required packages: libunwind, papi, jsoncpp
@@ -16,18 +16,17 @@ ADD_DEFINITIONS(-DDEBUG)
 set(CMAKE_CXX_STANDARD 11)
 
 # shared library
-set(WRAP ${PROJECT_SOURCE_DIR}/wrap/wrap.py)
-include(${PROJECT_SOURCE_DIR}/wrap/WrapConfig.cmake)
+#set(WRAP ${PROJECT_SOURCE_DIR}/wrap/wrap.py)
+#include(${PROJECT_SOURCE_DIR}/wrap/WrapConfig.cmake)
 link_directories(${CMAKE_SOURCE_DIR}/jevents)
 
-add_wrapped_file(papicnt.cpp papicnt.w)
-add_library(papicnt SHARED papi_wrap.h papi_wrap.cpp papicnt.cpp clustering.cpp clustering.h online_analyse.cpp online_analyse.h utility.cpp utility.h SocketClient.cpp SocketClient.h pmu.cpp pmu.h wrapper.cpp pmc_wrapper.h pmc_jevents.cpp)
-target_link_libraries(papicnt ${MPI_CXX_LIBRARIES} unwind unwind-x86_64 papi jsoncpp jevents)
-
+#add_wrapped_file(papicnt.cpp papicnt.w)
+add_library(papicnt SHARED papi_wrap.h papi_wrap.cpp papicnt.cpp clustering.cpp clustering.h online_analyse.cpp online_analyse.h utility.cpp utility.h SocketClient.cpp SocketClient.h pmu.cpp pmu.h wrapper.cpp pmc_wrapper.h pmc.cpp)
+target_link_libraries(papicnt PUBLIC unwind unwind-x86_64 papi jsoncpp jevents OpenMP::OpenMP_CXX)
 # Microbenchmarks
 
 add_executable(example_mpi_program example_mpi_program.cpp)
-target_link_libraries(example_mpi_program)
+target_link_libraries(example_mpi_program papicnt)
 
 # add_executable(microbenchmark_loop microbenchmark_loop.cpp)
 # target_link_libraries(microbenchmark_loop)

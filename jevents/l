@@ -1,0 +1,9 @@
+cpu/ref-cycles/                          cpu/event=0x00,umask=0x03/
+cpu/topdown-fetch-bubbles/               cpu/event=0x9c,umask=0x1/
+cpu/topdown-recovery-bubbles/            cpu/event=0xd,umask=0x1,cmask=1/
+cpu/topdown-slots-issued/                cpu/event=0xe,umask=0x1/
+cpu/topdown-slots-retired/               cpu/event=0xc2,umask=0x2/
+cpu/topdown-total-slots/                 cpu/event=0x3c,umask=0x0/
+msr/pperf/                               msr/event=0x03/
+msr/smi/                                 msr/event=0x04/
+msr/tsc/                                 msr/event=0x00/

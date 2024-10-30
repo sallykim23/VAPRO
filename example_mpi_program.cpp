@@ -6,6 +6,7 @@
 #include <fstream>
 #include <unistd.h>
 #include <string>
+#include <omp.h>
 //enum communication
 //{
 //    Chain,
@@ -88,6 +89,7 @@ int calc_op()// cost 0.6s
 
 void calc()
 {
+    
     calc_result[0]=0;
     // DEBUG: skewed overload
     static int cnt=0;
@@ -101,12 +103,62 @@ void calc()
         r = loop_len * 40 / (0 + 4);
     }
     for (int i = 0; i < r; ++i)
-//        for (int i = 0; i < loop_len * 40 / (rand()%mpi_size + 4); ++i)
     {
-        //calc_result[j]+=int(calc_result[j-1]+int(sin(sin(rand_engine())))*10000)%123123;
         calc_result[i] = calc_op();
     }
 }
+void mat1() {
+    int rows1 = 2000;
+	int cols1= 2000;
+	int rows2= 2000;
+	int cols2= 2000;
+    int* mat1 = (int*)malloc(sizeof(int)*rows1*cols1);
+    int* mat2 = (int*)malloc(sizeof(int)*rows2*cols2);
+    int* mat3 = (int*)malloc(sizeof(int)*rows1*cols2);
+    
+    #pragma omp parallel for collapse(2)
+    for(int i=0; i < rows1; ++i){
+        for(int j=0; j < cols2; ++j){
+            int v = 0;
+            for(int k=0; k < cols1; ++k){
+                v += mat1[i * cols1 + k] * mat2[k * cols2 + j];
+            }
+            mat3[i * cols2 + j] = v;
+        }
+    }
+    
+    free(mat1);
+    free(mat2);
+    free(mat3);
+    
+}
+
+void mat2() {
+    int rows1 =5000;
+	int cols1= 5000;
+	int rows2= 5000;
+	int cols2= 5000;
+    int* mat1 = (int*)malloc(sizeof(int)*rows1*cols1);
+    int* mat2 = (int*)malloc(sizeof(int)*rows2*cols2);
+    int* mat3 = (int*)malloc(sizeof(int)*rows1*cols2);
+    
+    #pragma omp parallel for 
+    for(int i=0; i < rows1; ++i){
+        for(int j=0; j < cols2; ++j){
+            int v = 0;
+            for(int k=0; k < cols1; ++k){
+                v += mat1[i * cols1 + k] * mat2[k * cols2 + j];
+            }
+            mat3[i * cols2 + j] = v;
+        }
+    }
+    
+    free(mat1);
+    free(mat2);
+    free(mat3);
+    
+}
+
 
 void calc2()
 {
@@ -264,8 +316,8 @@ int main(int argc, char* argv[])
         fprintf(stderr,"argc != 4");
         return -1;
     }
-    my_Init();
-    my_Barrier();
+    //my_Init();
+    //my_Barrier();
 
     send_size=atoi(argv[1]);
     //double send_time=atof(argv[1]);
@@ -275,25 +327,38 @@ int main(int argc, char* argv[])
     //MPI_Comm_rank(MPI_COMM_WORLD,&mpi_rank);
     //mpi_size_per_node=mpi_size/2;
     //MPI_Barrier(MPI_COMM_WORLD);
-    start_time=my_Wtime();
-    my_Barrier();
+    //start_time=my_Wtime();
+    //my_Barrier();
 
+    my_Init();
+    //#pragma omp parallel 
     for (int i=0;i<cnt_loops;++i)
     {
 //    fprintf(stderr,"start calc %d\n",i);//DEBUG
         local_time[i].before_calc=my_Wtime();
-        calc();
+        double start = omp_get_wtime();
+        mat1();
+        double end = omp_get_wtime();
+        printf("Execution Time: %f", end-start);
+        //my_Barrier();
+        local_time[i].before_comm=my_Wtime();
+        double start2 = omp_get_wtime();
+        mat2();
+        double end2 = omp_get_wtime();
+        printf("Exeuction Time: %f",end2-start2);
+        //my_Barrier();
+        //local_time[i].before_calc=my_Wtime();
         //MPI_Barrier(MPI_COMM_WORLD);
         //local_time[i].before_comm=MPI_Wtime();
         //calc2();
         //MPI_Barrier(MPI_COMM_WORLD);
-        local_time[i].before_comm=my_Wtime();
+        //local_time[i].before_comm=my_Wtime();
         //ioWork(mpi_rank);
         //MPI_Barrier(MPI_COMM_WORLD);
         //local_time[i].before_comm=MPI_Wtime();
         //comm(i);
         //MPI_Barrier(MPI_COMM_WORLD);
-        local_time[i].after_comm=my_Wtime();
+        //local_time[i].after_comm=my_Wtime();
 //    fprintf(stderr,"finish calc %d\n",i);//DEBUG
     }
 

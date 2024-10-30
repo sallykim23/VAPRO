@@ -338,6 +338,8 @@ __attribute_noinline__ void papi_update(int suffix, int mpi_func, int count, int
         printf("initialize papi\n");
         #ifdef USE_PAPI
                 papi_init();
+                init_time = rdtsc();
+                init_flag = true;
         #else
         	pmc_enable();
         #endif
@@ -361,6 +363,7 @@ __attribute_noinline__ void papi_update(int suffix, int mpi_func, int count, int
     // Get PMU data ASAP to exclude Vapro noise
     unsigned long long current_tsc = rdtsc();
     auto papi_data = papi_get_data(current_tsc);
+    printf("papi_get_data first time");
 #ifdef USE_RUSAGE
     papi_data.set_rusage_data(get_rusage_data().data());
 #endif
@@ -389,7 +392,7 @@ __attribute_noinline__ void papi_update(int suffix, int mpi_func, int count, int
 
     // skip in recursive mpi invocations
     // There might be recursive in MPI libraries.
-    if (in_mpi_flag && suffix == 0)
+   /* if (in_mpi_flag && suffix == 0)
     {
         recursive_depth++;
         return;
@@ -400,7 +403,7 @@ __attribute_noinline__ void papi_update(int suffix, int mpi_func, int count, int
         return;
     }
     in_mpi_flag = (suffix == 0);
-
+    */
     // online analysis
     static unsigned long long last_online_tsc = current_tsc;
     static int num_iters = 0;
@@ -493,7 +496,7 @@ __attribute_noinline__ void papi_update(int suffix, int mpi_func, int count, int
     last_time = rdtsc();
     #ifdef USE_PAPI
     	papi_get_data(last_time); // reset PAPI counter
-        fprintf(stderr,"papi_get_Data");
+        fprintf(stderr,"papi_get_Data for the 2nd time");
     #else
         last_totcycle = rdpmc_instructions();
     // #ifndef USE_ASSEMBLY_RDPMC
@@ -1005,18 +1008,20 @@ void print_graph_json(const Graph &graph, int rank, int total, const string &fil
             // debug
             one_call.append("T");
 
-            one_call.append(data.papi[total+rank]/1000000000.0);//need to change for the total # of threads
-            if (data.mpi_func == J_MPI_INIT)
+            one_call.append(double(data.timestamp - init_time) / CPU_FREQ);
+            //one_call.append(0.0);//data.papi[total+rank]/1000000000.0);//need to change for the total # of threads
+            if (data.mpi_func == J_MPI_INIT){
                 one_call.append(-0.00001);
+            }
             else
             {
-                one_call.append(data.papi[total+rank]/1000000000.0);
+                one_call.append(double(data.elapsed) / CPU_FREQ);//data.papi[total+rank]/1000000000.0);
                 sum_comm_time += double(data.elapsed) / CPU_FREQ;
             }
             // append other PMU data to the end
-           for (int i = 0; i < 12; ++i)
+           for (int i = 0; i < total; ++i){
                 one_call.append((Json::UInt64)data.papi[i]);
-
+            }
             list["value"].append(one_call);
         }
         output["edge"].append(list);

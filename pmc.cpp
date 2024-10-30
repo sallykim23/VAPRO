@@ -103,28 +103,29 @@ void papi_init()
         fprintf(stderr, "vertex type: %d\n", (int)vertex_type);
     }
 
-    init_flag = true;
-    papi_start_counters();
+     init_flag = true;
+     papi_start_counters();
+     PAPI_reset(eventset[0]);
 }
 
 DataType papi_get_data(ULL cur_time)
 {
     int num_threads = omp_get_num_procs();
     fprintf(stderr,"current num_thread:%d\n", num_threads);
-    long long* count= (long long *) malloc (num_threads *3 * sizeof(long long));
-    /// =  (long long*) malloc(num_threads * sizeof(long long));// (long long*) malloc(num_threads * sizeof(long long));
-    for (int i = 0; i < num_threads *3; i++){
+    long long* count= (long long *) malloc (num_threads * sizeof(long long));
+    
+    for (int i = 0; i < num_threads; i++){
 	    count[i] = 0;
     }
 
     int ret,thread_id;
 	
-    #pragma omp parallel
+    #pragma omp parallel private(thread_id, ret)
     {
         thread_id = omp_get_thread_num();      
         fprintf(stderr,"read_thread_id:%d\n", thread_id); 
         //start time of the thread
-        double start_time = omp_get_wtime();
+        //double start_time = omp_get_wtime();
     
         if ((ret = PAPI_read(eventset[thread_id], &count[thread_id])) != PAPI_OK){
             fprintf(stderr, "PAPI failed to read counters: %s\n", PAPI_strerror(ret));
@@ -132,13 +133,14 @@ DataType papi_get_data(ULL cur_time)
         }
 
         //ending time of the thread
-        double end_time = omp_get_wtime();
+        //double end_time = omp_get_wtime();
         
-        count[num_threads + thread_id] = end_time * 1000000000;//end timestamp
-		count[2*num_threads + thread_id] = (end_time - start_time) * 1000000000;//elapsed time
+        //count[num_threads + thread_id] = end_time * 1000000000;//end timestamp
+		//count[2*num_threads + thread_id] = (end_time - start_time) * 1000000000;//elapsed t
+	    //printf("timestamp:%f s\n", end_time);
+	    //printf("elapsedtime:%f s\n", end_time - start_time);
 
-	    printf("timestamp:%f s\n", end_time);
-	    printf("elapsedtime:%f s\n", end_time - start_time); 
+        PAPI_reset(eventset[thread_id]);
 	}
 
     DataType retv;

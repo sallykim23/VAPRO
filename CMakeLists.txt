@@ -22,18 +22,11 @@ link_directories(${CMAKE_SOURCE_DIR}/jevents)
 
 #add_wrapped_file(papicnt.cpp papicnt.w)
 add_library(papicnt SHARED papi_wrap.h papi_wrap.cpp papicnt.cpp clustering.cpp clustering.h online_analyse.cpp online_analyse.h utility.cpp utility.h SocketClient.cpp SocketClient.h pmu.cpp pmu.h wrapper.cpp pmc_wrapper.h pmc.cpp)
-target_link_libraries(papicnt PUBLIC unwind unwind-x86_64 papi jsoncpp jevents OpenMP::OpenMP_CXX)
+target_link_libraries(papicnt PUBLIC unwind unwind-x86_64 papi jsoncpp jevents OpenMP::OpenMP_CXX )
 # Microbenchmarks
 
-add_executable(example_mpi_program example_mpi_program.cpp)
-target_link_libraries(example_mpi_program papicnt)
+add_executable(example_omp_program example_omp_program.cpp)
+target_link_libraries(example_omp_program papicnt)
 
-# add_executable(microbenchmark_loop microbenchmark_loop.cpp)
-# target_link_libraries(microbenchmark_loop)
 
-# add_executable(microbenchmark_pair_send microbenchmark_pair_send.cpp)
-# target_link_libraries(microbenchmark_pair_send)
 
-# share library for hooking all functions
-# add_library(hook SHARED papi_wrap.h papi_wrap.cpp hook.cpp)
-# target_link_libraries(hook papi dl jsoncpp unwind unwind-x86_64)

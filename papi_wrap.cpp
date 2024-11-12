@@ -363,7 +363,7 @@ __attribute_noinline__ void papi_update(int suffix, int mpi_func, int count, int
     // Get PMU data ASAP to exclude Vapro noise
     unsigned long long current_tsc = rdtsc();
     auto papi_data = papi_get_data(current_tsc);
-    printf("papi_get_data first time");
+    printf("papi_get_data first time\n");
 #ifdef USE_RUSAGE
     papi_data.set_rusage_data(get_rusage_data().data());
 #endif
@@ -496,7 +496,7 @@ __attribute_noinline__ void papi_update(int suffix, int mpi_func, int count, int
     last_time = rdtsc();
     #ifdef USE_PAPI
     	papi_get_data(last_time); // reset PAPI counter
-        fprintf(stderr,"papi_get_Data for the 2nd time");
+        fprintf(stderr,"papi_get_Data for the 2nd time\n");
     #else
         last_totcycle = rdpmc_instructions();
     // #ifndef USE_ASSEMBLY_RDPMC

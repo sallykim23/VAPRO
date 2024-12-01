@@ -34,6 +34,7 @@
 
 
 // backtrace info
+static int called;
 extern VertexType vertex_type;
 extern void *backtrace_buffer[];
 extern int trace_size;
@@ -93,6 +94,8 @@ inline void get_backtrace()
 //    fprintf(stdout, "GOMP_parallel_start end\n");
 //}
 
+static thread_local int recursive_cnt =0;
+
 _EXTERN_C_ void GOMP_parallel (void (*fn)(void *), void *data, unsigned num_threads, unsigned int flags) 
 {
     static void (*GOMP_parallel_p) (void (*fn) (void *),
@@ -106,12 +109,25 @@ _EXTERN_C_ void GOMP_parallel (void (*fn)(void *), void *data, unsigned num_thre
             exit(1);
         }
     }
+        fprintf(stdout, "GOMP_parallel_start begin\n");
+        printf("before GOMP: recursivecnt: %d\n", recursive_cnt);
+        GOMP_parallel_p(fn, data, num_threads);
+        recursive_cnt ++;
+        fprintf(stdout, "GOMP_parallel_start end\n");
 
-    fprintf(stdout, "GOMP_parallel_start begin\n");
-
-    GOMP_parallel_p(fn, data, num_threads);
-
-    fprintf(stdout, "GOMP_parallel_start end\n");
+    if(recursive_cnt== 3){
+        get_backtrace();   
+        printf("recursivecnt: %d\n", recursive_cnt);
+        papi_update(0, 359, 0, 0, nullptr);
+    }
+    else if(recursive_cnt == 5){
+       printf("recursivecnt: %d\n", recursive_cnt);
+       papi_update(1, 359, 0, 0, nullptr);
+    }
+    else if(recursive_cnt ==7){
+        recursive_cnt = 2;
+        return;
+    }
 }
 
 _EXTERN_C_ int my_Init(int *argc, char ***argv) { 
